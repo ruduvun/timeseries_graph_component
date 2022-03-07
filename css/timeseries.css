@@ -1,0 +1,30 @@
+.timeseries-context-menu {
+    position: fixed;
+    background: #fff;
+    z-index: 9999999;
+    width: 150px;
+    top: 0;
+    left: 0;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+    visibility:hidden;
+    font-size: 13px;
+    list-style-type: none;
+    padding-left:0px;
+    text-align: center;
+}
+
+.timeseries-context-menu-option{
+    cursor: pointer;
+    text-decoration: none;
+    width: 100%;
+}
+.timeseries-context-menu-option div {
+    background-color: white;
+    color:black;
+    width: 100%;
+}
+
+.timeseries-context-menu-option div:hover {
+    background-color: black;
+    color:white;
+}
