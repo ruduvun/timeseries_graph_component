@@ -885,12 +885,12 @@ class TimeSeriesGraph {
         }
         else {
             let result = parseInt(((index - this.#start) * this.#scale).toFixed(0))
-            this.draw_line(
+            /*this.draw_line(
                 {x: result, y: 0},
                 {x: result, y: this.#height},
                 "#BBBBBB",
                 5
-            );
+            );*/
             return parseInt(((index - this.#start) * this.#scale).toFixed(0));
         }
             
