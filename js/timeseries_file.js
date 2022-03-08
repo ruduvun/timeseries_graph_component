@@ -1,7 +1,6 @@
 /**
  * @fileoverview Library for loading values and creating time series graph
  * @author Radovan Kavka
- * @version 0.0.1
  */
 
 
@@ -58,7 +57,7 @@ function readFileAsync(file) {
   }
 
 /**
- * Takes all binary files and send them into readFileAsync. After async operation, the data is sent into 'load_success' function
+ * Takes all binary files and sends them into readFileAsync. After async operation, the data is sent into 'load_success' function
  */
 function load_timeseries_binary()
 {
@@ -484,7 +483,11 @@ class TimeSeriesGraph {
      */
     #draw_signals(){
         //console.log("Drawing signals...");
-        let center = this.#height / 2;
+        let center = parseInt(this.#height / 2);
+        let constant = this.#height / 256;
+        // pocet na x pro scale < 1
+        let pocet_na_x = this.get_index_with_coords(1) - this.get_index_with_coords(0) + 2;
+
         for (let sig of this.#signals) {
             if (sig.show) {
                 
@@ -497,8 +500,8 @@ class TimeSeriesGraph {
                         }
                             
                         this.draw_line(
-                            {x: this.get_coords_with_x(this.#start + i), y: center - sig.data[this.#start + i]}, 
-                            {x: this.get_coords_with_x(this.#start + i + 1), y: center - sig.data[this.#start + i + 1]}, 
+                            {x: this.get_coords_with_x(this.#start + i), y: center - (sig.data[this.#start + i] * constant)}, 
+                            {x: this.get_coords_with_x(this.#start + i + 1), y: center - (sig.data[this.#start + i + 1]*constant)}, 
                             sig.color, 
                             sig.line_width
                         );   
@@ -506,9 +509,8 @@ class TimeSeriesGraph {
                 }
                 else {
                     let index = this.#start;
-                    let pocet_na_x = this.get_index_with_coords(1) - this.get_index_with_coords(0) + 1;
-                    //let pocet_na_x = parseInt(((this.#width * this.#scale) - this.#width) / 4);
-                    //console.log(pocet_na_x);
+                    
+                    //console.log(`[draw_signals] pocet_na_x: ${pocet_na_x}`);
                     
                     for(let i = 0; i < this.#width; i++) {
                         if(this.#start + index == sig.data.byteLength - 1)
@@ -522,10 +524,11 @@ class TimeSeriesGraph {
                         }
                         min = Math.min(...arr);
                         max = Math.max(...arr);
+                        //console.log(`[draw_signals] arr.length: ${arr}`);
                         if(arr.length > 1) {
                             this.draw_line(
-                                {x: i, y: center - min}, 
-                                {x: i, y: center - max}, 
+                                {x: i, y: center - (min*constant)}, 
+                                {x: i, y: center - (max*constant)}, 
                                 sig.color, 
                                 sig.line_width
                             ); 
@@ -668,8 +671,7 @@ class TimeSeriesGraph {
      */
     zoom(event){
         let val = event.deltaY;
-        let posun = 1;
-        
+        let previousScale = this.#scale;
         // zoom in
         if(val < 0){
            this.#scale *= 1.1;
@@ -683,7 +685,7 @@ class TimeSeriesGraph {
             this.#scale = this.#scale.toFixed(5);
             //if(this.#scale < 0.1)    this.#scale = (0.1).toFixed(1);
         }
-        this.#scale_by_coords(parseInt(event.x));
+        this.#scale_by_coords(this.#remove_offset_from_coord(event.x), previousScale);
         console.log("[scale]: " + this.#scale);
         this.#render();
     }
@@ -701,19 +703,15 @@ class TimeSeriesGraph {
     }
 
     #deselect_annotation() {
-        for(let a of this.#annotations) {
+        for(let a of this.#annotations)
             if(a.highlight)
-            {
                 a.highlight = false;
-            }
-        }
     }
 
     mouse_down(e){
         //console.log(`"[mouse_down] x: ${e.x}, y: ${e.y}"`);
         if(e.which == 1)
-            this.#is_mouse_down = true;
-            
+            this.#is_mouse_down = true; 
     }
 
     mouse_up(e){
@@ -725,19 +723,16 @@ class TimeSeriesGraph {
     }
 
     mouse_move(e){
-        
         if(this.#is_mouse_down) {
             if(this.#drag_x == -1)
-                this.#drag_x = parseInt(e.x);
+                this.#drag_x = this.#remove_offset_from_coord(e.x);
             else {
-                let deltaX = parseInt((this.#drag_x - parseInt(e.x)));
-                deltaX = parseInt(deltaX / this.#scale);
-                //console.log("deltaX: " + deltaX);
-                
-                this.#start += deltaX;
+                let newX = this.#remove_offset_from_coord(e.x);
+                let deltaIndexes = this.get_index_with_coords(this.#drag_x) - this.get_index_with_coords(newX);
+                this.#start += deltaIndexes;
                 if(this.#start < 0) this.#start = 0;
                 this.#slider.value = this.#start;
-                this.#drag_x = parseInt(e.x);
+                this.#drag_x = this.#remove_offset_from_coord(e.x);
                 this.#render();
             }
         }
@@ -753,7 +748,7 @@ class TimeSeriesGraph {
         let wasAnnotationClicked = false;
         console.log(`[catch_click] Clicked on index ${clickedX}, coord: ${clickedCoord}`);
         for(let a of this.#annotations) {
-            if (clickedX > (a.x - (3*this.#scale)) && clickedX < (a.x + (3*this.#scale))) {
+            if (clickedX > (a.x - (3/this.#scale)) && clickedX < (a.x + (3/this.#scale))) {
                 wasAnnotationClicked = true;
                 // zruseni zvyrazneni predesleho
                 this.#deselect_annotation();
@@ -860,10 +855,7 @@ class TimeSeriesGraph {
         let clickedX = -1;
         
         if(withOffset) {
-            let rect = this.#canvas.getBoundingClientRect();
-            //console.log(`[get_index_with_coords] coord: ${coord}, rect.left: ${rect.left}`);
-            // x v grafu bez offsetu canvasu
-            clickedX = parseInt(coord - rect.left);
+            clickedX = this.#remove_offset_from_coord(coord);
         }
         else {
             clickedX = parseInt(coord);
@@ -891,20 +883,38 @@ class TimeSeriesGraph {
         else if(this.#scale > 1) {
             return parseInt(((index - this.#start) * this.#scale).toFixed(0));
         }
-        else
+        else {
+            let result = parseInt(((index - this.#start) * this.#scale).toFixed(0))
+            this.draw_line(
+                {x: result, y: 0},
+                {x: result, y: this.#height},
+                "#BBBBBB",
+                5
+            );
             return parseInt(((index - this.#start) * this.#scale).toFixed(0));
+        }
+            
     }
 
-    #scale_by_coords(x) {
+    #remove_offset_from_coord(coord) {
+        let rect = this.#canvas.getBoundingClientRect();
+        //console.log(`[get_index_with_coords] coord: ${coord}, rect.left: ${rect.left}`);
+        // x v grafu bez offsetu canvasu
+        let newX = parseInt(coord - rect.left);
+        return newX;
+    }
+
+    #scale_by_coords(x, previousScale) {
         console.log(`[scale_by_coords] X=${x}`);
         let center_x = this.#width / 2;
         let rel_x = x - center_x;
         let scaledX = rel_x / this.#scale;
+        let newStart = parseInt((x / previousScale) - (x / this.#scale));
         console.log(`[scale_by_coords] New scaled x=${scaledX}`);
-        if (scaledX < 0)
+        if (this.#start + newStart < 0)
             this.#start = 0;
         else
-            this.#start = parseInt(scaledX);
+            this.#start += newStart;
         this.#slider.value = this.#start;
     }
 
@@ -923,8 +933,8 @@ class TimeSeriesGraph {
     #open_context_menu(e) {
         this.#context_menu.style.visibility = "visible";
         //context menu
-        let rect = this.#canvas.getBoundingClientRect();
-        const xTranslate = ((e.clientX - rect.left) * 100) / this.#width;
+        let coord = this.#remove_offset_from_coord(e.clientX);
+        const xTranslate = ((coord) * 100) / this.#width;
         
         this.#context_menu.style.left = (e.clientX)+ 'px';
         this.#context_menu.style.top = (e.clientY + 5)+ 'px';
