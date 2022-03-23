@@ -96,10 +96,7 @@ export default class TimeSeriesGraph {
     }
 
     #init_components(){
-        // load required scripts and links
-        //dynamicallyLoadScript("https://cdn.jsdelivr.net/gh/dmuy/ctxmenu/ctxmenu.js");
 
-        this.#container.oncontextmenu="return false;";
         this.#context_menu = document.createElement("ul");
         this.#context_menu.className = "timeseries-context-menu";
         this.#context_menu.innerHTML = "<div>Item 1</div><div>Item 2</div>";
@@ -115,16 +112,11 @@ export default class TimeSeriesGraph {
         this.#slider.value = 0;
         this.#slider.step = 5;
         this.#slider.style.width = "100%";
-        this.#slider.addEventListener('input', function(e){
-            graph.set_value(e.target.value);
-        });
+        this.#slider.addEventListener('input', e => this.set_value(e.target.value));
         this.#container.appendChild(this.#slider);
+
         // zoom event
-    
-        document.getElementById("timeseries_graph").addEventListener('wheel',function(event){
-            event.preventDefault();
-            graph.zoom(event);
-        }, false);
+        document.getElementById("timeseries_graph").addEventListener('wheel', event => this.zoom(event), false);
         
         // oddeleni
         let hr = document.createElement("hr");
@@ -154,14 +146,10 @@ export default class TimeSeriesGraph {
         this.#container.appendChild(an_p);
         this.#container.appendChild(an_in);
         this.#container.appendChild(an_name)
-        an_but.addEventListener("click", function () {
-            graph.create_annotation(parseInt(document.getElementById("an_val").value), document.getElementById("an_name").value);
-        });
+        an_but.addEventListener("click", event => this.create_annotation(document.getElementById("an_val").value, document.getElementById("an_name").value));
         this.#container.appendChild(an_but);
 
-        an_mode.addEventListener("click", function (){
-            graph.switch_annotation_mode();
-        });
+        an_mode.addEventListener("click", () => this.switch_annotation_mode());
         this.#container.appendChild(an_mode);
         this.#annotations_heading = document.createElement("h5");
         this.#annotations_heading.innerText = "Seznam anotací";
@@ -170,27 +158,11 @@ export default class TimeSeriesGraph {
         this.#annotations_list = document.createElement("ul");
         this.#container.appendChild(this.#annotations_list);
 
-        this.#canvas.addEventListener('mousedown', function(e) {
-            graph.mouse_down(e);
-        });
-        this.#canvas.addEventListener('mouseup', function(e) {
-            graph.mouse_up(e);
-        });
-        this.#canvas.addEventListener('mousemove', function(e) {
-            graph.mouse_move(e);
-        });
-        this.#canvas.addEventListener('click', function (e) {
-            e.preventDefault();
-            graph.catch_click(e);
-            console.log(`e.which: ${e.which}`);
-        });
-        this.#canvas.addEventListener('contextmenu', function (e) {
-            
-            e.preventDefault();
-            graph.catch_rightclick(e);
-            return false;
-        }, false);
-        //this.#canvas.oncontextmenu= function(e) {e.preventDefault();}
+        this.#canvas.addEventListener('mousedown', e => this.mouse_down(e));
+        this.#canvas.addEventListener('mouseup', e => this.mouse_up(e));
+        this.#canvas.addEventListener('mousemove', e => this.mouse_move(e));
+        this.#canvas.addEventListener('click', e => this.catch_click(e));
+        this.#canvas.addEventListener('contextmenu', e => this.catch_rightclick(e), false);
     }
 
     /**
@@ -294,10 +266,7 @@ export default class TimeSeriesGraph {
         let constant = this.#height / 256;
         // pocet na x pro scale < 1
         let pocet_na_x = this.get_index_with_coords(1) - this.get_index_with_coords(0);
-        /*
-        if (pocet_na_x < this.#zoom_out_min)
-            pocet_na_x = this.#zoom_out_min;
-        */
+
         for (let sig of this.#signals) {
             if (sig.show) {
                 
@@ -437,10 +406,13 @@ export default class TimeSeriesGraph {
      */
     destroy(){
         console.log("Destroying graph...");
-        //this.#container.removeChild(this.#canvas);
-        while(this.#container.firstChild) this.#container.removeChild(this.#container.firstChild);
+        // odebrání ovládacích prvků grafu
+        while(this.#canvas.nextSibling) this.#container.removeChild(this.#canvas.nextSibling);
+        // odebrání grafu
+        if(this.#canvas)
+            this.#container.removeChild(this.#canvas);
     }
-    
+
     // EVENTY
     /**
      * Event driven function to move left in graph by 'n' points
@@ -480,6 +452,7 @@ export default class TimeSeriesGraph {
      * @param {Event} event 
      */
     zoom(event){
+        event.preventDefault();
         let val = event.deltaY;
         let previousScale = this.#scale;
         // zoom in
@@ -503,12 +476,13 @@ export default class TimeSeriesGraph {
     }
 
     create_annotation(val, name){
+        let value = parseInt(val);
         for(let a of this.#annotations){
-            if (a.x == val)
+            if (a.x == value)
                 return;
         }
-        console.log("Creating annotation on x=" + val);
-        let an = {x: val, highlight: false, name: name};
+        console.log("Creating annotation on x=" + value);
+        let an = {x: value, highlight: false, name: name};
         this.#annotations.push(an);
         this.#create_annotations_list();
         this.#render();
@@ -551,6 +525,7 @@ export default class TimeSeriesGraph {
     }
 
     catch_click(e){
+        e.preventDefault();
         if (this.#context_menu_opened)
             this.#close_context_menu();
         console.log(`[catch_click] ClickedX: ${this.#remove_offset_from_coord(e.x)}`);
@@ -561,6 +536,7 @@ export default class TimeSeriesGraph {
     }
 
     catch_rightclick(e) {
+        e.preventDefault();
         this.#select_annotation_if_clicked(e);
         if(this.#annotation_mode) {
             console.log(`[catch_rightclick]`);
@@ -570,6 +546,7 @@ export default class TimeSeriesGraph {
             else
                 this.#close_context_menu()
         }
+        return false;
     }
 
 
@@ -783,13 +760,38 @@ export default class TimeSeriesGraph {
         console.log(`[open_context_menu] clientX: ${e.clientX}`);
         let x = this.get_index_with_coords(e.clientX, true);
         console.log(`[open_context_menu] Menu will be for index ${x}`);
-        let options = "";
-        if(this.#annotation_selected)
-            options = `<a class='timeseries-context-menu-option' onclick='graph.edit_annotation()'><div>Upravit vybrané anotace</div></a>
-            <a class='timeseries-context-menu-option' onclick='graph.remove_annotation()'><div>Smazat vybrané anotace</div></a>`;
-        else
-            options = "<a class='timeseries-context-menu-option' onclick='graph.prompt_annotation(" + x + ")'><div>Vytvořit anotaci</div></a>";
-        this.#context_menu.innerHTML = options;
+        // odstranění předešlých možností
+        while(this.#context_menu.firstChild) this.#context_menu.removeChild(this.#context_menu.firstChild);
+        // options
+        if(this.#annotation_selected) {
+            //edit
+            let editA = document.createElement("a");
+            editA.classList = ["timeseries-context-menu-option"];
+            editA.onclick = () => this.edit_annotation();
+            let editDiv = document.createElement("div");
+            editDiv.innerText = "Upravit vybrané anotace";
+            editA.appendChild(editDiv);
+            //remove
+            let removeA = document.createElement("a");
+            removeA.classList = ["timeseries-context-menu-option"];
+            removeA.onclick = () => this.remove_annotation();
+            let removeDiv = document.createElement("div");
+            removeDiv.innerText = "Odstranit vybrané anotace";
+            removeA.appendChild(removeDiv);
+
+            this.#context_menu.appendChild(editA);
+            this.#context_menu.appendChild(removeA);
+        }    
+        else {
+            let createA = document.createElement("a");
+            createA.classList = ["timeseries-context-menu-option"];
+            createA.onclick = () => this.prompt_annotation(x);
+            let createDiv = document.createElement("div");
+            createDiv.innerText = "Vytvořit anotaci";
+            createA.appendChild(createDiv);
+
+            this.#context_menu.appendChild(createA);
+        }
     }
 
     /**

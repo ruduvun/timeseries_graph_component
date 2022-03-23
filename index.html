@@ -11,44 +11,20 @@
     <script src="js/file_load.js"></script>
     <script src="js/canvas_axis.js"></script>
     -->
-    <script src="js/timeseries_file.js"></script>
     <link rel="stylesheet" href="css/timeseries.css">
+    <script type="module" src="js/timeseries_file.js"></script>
 
 </head>
 <body>
     <div id="main-container" class="container">
         <h1>Vykreslovaní časových řad - DEMO</h1>
-        <!--
-        <h3>Požadavky na fungování</h3>
-        <ul>
-            <li>JQuery - pro využití AJAX volání souboru</li>
-        </ul>
-        -->
-        <h2>Načtení dat ze souboru</h2>
-        <input class="btn btn-outline-primary" type="file" id="files"  multiple/><br>
-        <button class="btn btn-success my-4" id="read-file" onclick="load_timeseries_binary()">Načíst soubory</button><br>
-        <button class="btn btn-secondary" onclick="init_graph();">Vykresli graf</button>
-        <div id="data-list"></div>
+        <h3>Načtení z binárních souborů</h3>
         <script>
-            /*
-            const json = load_time_series("src/dummy.txt");
-            console.log(json.time_series);
-            print_data(json);
-            */
+            window.onload = function () {
+                init_timeseries_binary("test_container");
+            }
         </script>
-        <!--
         <hr>
-        <h2>Vykreslení mřížky</h2>
-        <canvas id="canvas1">
-            Unable to create canvas due to browser compatibility
-        </canvas>
-        <script>
-            //init_canvas1();
-        </script>
-        -->
-        <hr>
-        <h2>Vykreslení bodů</h2>
-        <h6></h6>
         <div id="test_container" class="mb-5">
 
         </div>
