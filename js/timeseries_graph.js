@@ -116,8 +116,27 @@ export default class TimeSeriesGraph {
         this.#container.appendChild(this.#slider);
 
         // zoom event
-        document.getElementById("timeseries_graph").addEventListener('wheel', event => this.zoom(event), false);
+        this.#canvas.addEventListener('wheel', event => this.zoom(event), false);
         
+        let flexbox = document.createElement("div");
+        flexbox.classList = ["timeseries_signal_switches"];
+        
+        // skryti/zobrazeni signalu
+        for(let sig of this.#signals) {
+            let signal_div = document.createElement("div");
+            signal_div.classList = ["timeseries_signal_div"];
+            let label = document.createElement("label");
+            let checkbox = document.createElement("input");
+            label.innerText = sig.name;
+            label.style.marginRight = "0.5rem";
+            checkbox.type = "checkbox";
+            checkbox.checked = true;
+            checkbox.addEventListener("input", () => this.switch_signal_visibility(sig.num));
+            signal_div.appendChild(label);
+            signal_div.appendChild(checkbox);
+            flexbox.appendChild(signal_div);
+        }
+        this.#container.appendChild(flexbox);
         // oddeleni
         let hr = document.createElement("hr");
         this.#container.appendChild(hr);
