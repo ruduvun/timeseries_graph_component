@@ -37,6 +37,10 @@ export default class TimeSeriesGraph {
     #context_menu
     // je kontextové okno otevřené?
     #context_menu_opened
+    // počet mezi vertikálními čárami
+    #grid_density
+    #grid_density_max
+    #grid_density_min
     /**
      * 
      * @param {*} container 
@@ -55,9 +59,12 @@ export default class TimeSeriesGraph {
         this.#is_mouse_down = false;
         this.#annotation_mode = false;
         this.#annotation_selected = false;
-        this.create_annotation(100, "x");
+        this.#grid_density = 100;
+        this.#grid_density_max = 50000;
+        this.#grid_density_min = 10;
+        /*this.create_annotation(100, "x");
         this.create_annotation(120, "y");
-        this.create_annotation(140, "z");
+        this.create_annotation(140, "z");*/
         this.#render();
     }
     /**
@@ -160,6 +167,7 @@ export default class TimeSeriesGraph {
         let an_mode = document.createElement("button");
         an_mode.innerText = "Zapnout anotační režim";
         an_mode.id = "an_mode_button";
+        an_mode.classList = ["timeseries-load-button"];
 
 
         this.#container.appendChild(an_p);
@@ -194,8 +202,8 @@ export default class TimeSeriesGraph {
         this.draw_rectangle(
             {x: 0, y: 0}, 
             {x: this.#width, y: 0}, 
-            {x: this.#width, y: this.#height}, 
-            {x: 0, y: this.#height}, 
+            {x: this.#width, y: this.#height - 1}, 
+            {x: 0, y: this.#height - 1}, 
             "#808080", 
             0.5
         );
@@ -218,7 +226,8 @@ export default class TimeSeriesGraph {
                     "#808080", 
                     0.5
                 );    
-                ctx.fillText(i, 5, constant*posun + 2);
+                //ctx.fillText(i, 5, constant*posun + 2);
+                this.draw_text(i, 5, constant*posun + 2, "#000000");
             }
             posun++;
         }
@@ -231,50 +240,49 @@ export default class TimeSeriesGraph {
                     "#808080", 
                     0.5
                 );    
-                ctx.fillText(i, 5, constant*posun + 2);
+                //ctx.fillText(i, 5, constant*posun + 2);
+                this.draw_text(i, 5, constant*posun + 2, "#000000");
             }
             posun++;
         }
         // sede osy - vertikalni
-        /*
-        for(let i = 0; i <= this.#width; i++){
-            // zoom in
-            if(this.#zoom_in > 0) {
-                if( (this.#start + i) % 100 == 0) {
+        
+        if(this.#scale >= 1) {
+            let indexed = [];
+            for(let i = 0; i < this.#width; i++) {
+                let index = this.get_index_with_coords(i, false);
+                if(index % this.#grid_density == 0 && !indexed.includes(index)) {
+                    indexed.push(index);
                     this.draw_line(
-                        {x: i , y: 0}, 
-                        {x: i, y: this.#height}, 
-                        "#808080", 
+                        {x: i, y: 0},
+                        {x: i, y: this.#height},
+                        "#808080",
                         0.5
                     );
-                    ctx.fillText( Math.floor((this.#start + i) / this.#zoom_in), i + 5, this.#height - 10);
+                    this.draw_text(index, i+5, this.#height - 8, "#808080");
                 }
             }
-            // zoom out
-            else if (this.#zoom_out > 0) {
-                if ( (this.#start + i)  % 100 == 0 ) {
+        }
+        else {
+            for(let i = 0; i < this.#width; i++) {
+                let indexFrom = this.get_index_with_coords(i, false);
+                let indexTo = this.get_index_with_coords(i+1, false);
+                let index = 0;
+                for(let i = indexFrom; i < indexTo; i++)
+                    if(i % this.#grid_density == 0)
+                        index = i;
+                if(index != 0) {
                     this.draw_line(
-                        {x: i, y: 0}, 
-                        {x: i, y: this.#height}, 
-                        "#808080", 
+                        {x: i, y: 0},
+                        {x: i, y: this.#height},
+                        "#808080",
                         0.5
                     );
-                    ctx.fillText( Math.floor((this.#start + i) * this.#zoom_out), i + 5, this.#height - 10);
+                    this.draw_text(index, i+5, this.#height - 8, "#808080");
                 }
             }
-            // 1:1
-            else{
-                if (i % 100 == 0){
-                    this.draw_line(
-                        {x: i, y: 0}, 
-                        {x: i, y: this.#height}, 
-                        "#808080", 
-                        0.5
-                    );
-                    ctx.fillText(this.#start + i, i + 5, this.#height - 10);
-                }
-            } 
-        }*/
+        }
+        
     }
     /**
      * Draws all signals from 'signals' array
@@ -309,7 +317,6 @@ export default class TimeSeriesGraph {
                     let index = this.#start;
                     
                     //console.log(`[draw_signals] pocet_na_x: ${pocet_na_x}`);
-                    
                     for(let i = 0; i < this.#width; i++) {
                         if(this.#start + index == sig.data.byteLength - 1)
                             break;
@@ -355,10 +362,8 @@ export default class TimeSeriesGraph {
             let real_x = this.get_coords_with_x(an.x);
             // anotace je v rozmezi grafu
             if(real_x >= 0 && real_x < (this.#start + this.#width)){
-                
                 //console.log(`[draw_annotations] Drawing on x=${real_x}`);
-                for(let i = 0; i < this.#height; i += posun*2)
-                {
+                for(let i = 0; i < this.#height; i += posun*2) {
                     if(an.highlight) {
                         this.draw_line(
                             {x: real_x, y: i},
@@ -366,7 +371,6 @@ export default class TimeSeriesGraph {
                             "#FF0000", 
                             0.5
                         );
-                        
                     }
                     else {
                         this.draw_line(
@@ -375,9 +379,7 @@ export default class TimeSeriesGraph {
                             "#000000", 
                             0.5
                         );
-                        
                     }
-                    
                 }
                 //console.log(`[draw_annotations] Before text draw: x=${real_x}`);
                 if(an.highlight) {
@@ -393,7 +395,7 @@ export default class TimeSeriesGraph {
     }
 
     /**
-     * Clears canvas, draws axis and then draws all signals in 'signals' array
+     * Clears canvas, draws axis and then draws all signals from 'signals' array
      */
     #render(){
         this.#clear();
@@ -489,12 +491,18 @@ export default class TimeSeriesGraph {
                 this.#scale = 0.6;
             //if(this.#scale < 0.1)    this.#scale = (0.1).toFixed(1);
         }
+        this.#set_density();
+        if(this.#grid_density > this.#grid_density_max)
+            this.#grid_density = this.#grid_density_max;
+        else if (this.#grid_density < this.#grid_density_min)
+            this.#grid_density = this.#grid_density_min;
         this.#scale_by_coords(this.#remove_offset_from_coord(event.x), previousScale);
         console.log("[scale]: " + this.#scale);
+        console.log("[grid_density]: " + this.#grid_density);
         this.#render();
     }
 
-    create_annotation(val, name){
+    create_annotation(val, name) {
         let value = parseInt(val);
         for(let a of this.#annotations){
             if (a.x == value)
@@ -591,6 +599,7 @@ export default class TimeSeriesGraph {
         this.#ctx.lineTo(p3.x, p3.y);
         this.#ctx.lineTo(p4.x, p4.y);
         this.#ctx.closePath();
+
         this.#ctx.stroke();
     }
 
@@ -617,9 +626,11 @@ export default class TimeSeriesGraph {
      * @param {string} color Color of text
      */
     draw_text(text, x, y, color="#000000"){
+        if (typeof text != "string")
+            text = text.toString();
+        //console.log(`[draw_text] text: ${text}, x: ${x}, y: ${y}, color: ${color}`);
         this.#ctx.beginPath();
         this.#ctx.fillStyle = color;
-        //console.log(`[draw_text] x: ${x}, y: ${y}`);
         this.#ctx.fillText(text, x, y);
         this.#ctx.stroke();
         this.#ctx.fillStyle = "#000000";
@@ -727,6 +738,19 @@ export default class TimeSeriesGraph {
         let result = Math.sqrt(x1**2 - x2**2)
         //console.log(`[get_distance] ${result}`);
         return Math.sqrt(x1**2 - x2**2);
+    }
+
+    #set_density() {
+        let min = this.get_index_with_coords(0, false);
+        let max = this.get_index_with_coords(this.#width, false);
+        if (this.#scale >= 1)
+            this.#grid_density = Math.ceil(Math.floor((max - min) / 13) / 10) * 10;
+        else if (this.#scale < 1 && this.#scale > 0.2)
+            this.#grid_density = Math.ceil(Math.floor((max - min) / 13) / 100) * 100;
+        else if (this.#scale <= 0.2 && this.#scale > 0.1)
+            this.#grid_density = Math.ceil(Math.floor((max - min) / 13) / 500) * 500;
+        else 
+            this.#grid_density = Math.ceil(Math.floor((max - min) / 13) / 1000) * 1000;
     }
 
     /**
