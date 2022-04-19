@@ -11,6 +11,7 @@
     list-style-type: none;
     padding-left:0px;
     text-align: center;
+    font-family: Calibri,Verdana,sans-serif!important;
 }
 
 .timeseries-context-menu-option{
@@ -53,6 +54,7 @@ input.timeseries-load-button[type="file"] {
     color: white;
     margin-bottom: 0.5rem;
     border-radius: 3px;
+    font-size: 17px;
 }
 .timeseries-custom-file-upload:hover{
     background-color: #1d2e38;
@@ -68,4 +70,7 @@ input.timeseries-load-button[type="file"] {
     flex-basis: auto;
     align-self: center;
 
+}
+.timeseries_font {
+    font-family: Calibri,Verdana,sans-serif!important;
 }

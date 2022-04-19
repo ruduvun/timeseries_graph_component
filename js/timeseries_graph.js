@@ -74,13 +74,13 @@ export default class TimeSeriesGraph {
         this.#canvas = document.createElement("canvas");
         this.#canvas.id = "timeseries_graph";
         // 16 / 9 aspect ratio podle sirky div-u
-        this.#width = this.#container.offsetWidth;
+        this.#width = this.#container.offsetWidth ;
         this.#height = (this.#width * 9 / 16);
         this.#canvas.width = this.#width;
         this.#canvas.height = this.#height;
         // pripnuti canvasu do pozadovaneho containeru
         this.#container.appendChild(this.#canvas);
-        
+        // ziskani kontextu canvasu pro kresleni
         this.#ctx = this.#canvas.getContext("2d")
         /*
         let input = document.createElement("input");
@@ -115,7 +115,7 @@ export default class TimeSeriesGraph {
         this.#slider = document.createElement("input");
         this.#slider.type = "range";
         this.#slider.min = 0;
-        this.#slider.max = 800000;
+        this.#slider.max = 800000 - this.#width;
         this.#slider.value = 0;
         this.#slider.step = 5;
         this.#slider.style.width = "100%";
@@ -161,7 +161,7 @@ export default class TimeSeriesGraph {
         an_name.type = "text";
 
         let an_but = document.createElement("button");
-        an_but.classList = ["btn btn-warning"];
+        an_but.classList = ["timeseries-load-button"];
         an_but.innerText = "Vytvořit anotaci";
 
         let an_mode = document.createElement("button");
@@ -201,9 +201,7 @@ export default class TimeSeriesGraph {
         // ramecek
         this.draw_rectangle(
             {x: 0, y: 0}, 
-            {x: this.#width, y: 0}, 
-            {x: this.#width, y: this.#height - 1}, 
-            {x: 0, y: this.#height - 1}, 
+            {x: this.#width, y: this.#height-1}, 
             "#808080", 
             0.5
         );
@@ -476,26 +474,30 @@ export default class TimeSeriesGraph {
         event.preventDefault();
         let val = event.deltaY;
         let previousScale = this.#scale;
-        // zoom in
+        // priblizeni
         if(val < 0){
            this.#scale *= 1.1;
            this.#scale = this.#scale.toFixed(5);
            if(this.#scale > 0.6 && this.#scale < 1)
                 this.#scale = 1;
         }
-        //zoom out
+        // oddaleni
         else {
             this.#scale /= 1.1;
             this.#scale = this.#scale.toFixed(5);
             if(previousScale == 1)
                 this.#scale = 0.6;
-            //if(this.#scale < 0.1)    this.#scale = (0.1).toFixed(1);
         }
+        // prizpusobeni hustoty vertikalni mrizky
         this.#set_density();
+        // prizpusobeni posuvnikoveho ovladani
+        this.#update_slider();
+        // horni a spodni mez hustoty vertikalni mrizky
         if(this.#grid_density > this.#grid_density_max)
             this.#grid_density = this.#grid_density_max;
         else if (this.#grid_density < this.#grid_density_min)
             this.#grid_density = this.#grid_density_min;
+        // aktualizace odchylky hodnot signalu
         this.#scale_by_coords(this.#remove_offset_from_coord(event.x), previousScale);
         console.log("[scale]: " + this.#scale);
         console.log("[grid_density]: " + this.#grid_density);
@@ -583,22 +585,21 @@ export default class TimeSeriesGraph {
     // VYKRESLOVANI ZAKLADNICH TVARU
     /**
      * Draws rectangle to current context of a canvas
-     * @param {Point} p1 First point
-     * @param {Point} p2 Second point
-     * @param {Point} p3 Third point
-     * @param {Point} p4 Fourth point
+     * @param {Point} p1 Begin point
+     * @param {Point} p2 End point
      * @param {string} color Color of rectangle to be drawn
      * @param {float} line_width Width of rectangle to be drawn
      */
-    draw_rectangle(p1, p2, p3, p4, color, line_width){
+    draw_rectangle(p1, p2, color, line_width){
         this.#ctx.beginPath();
         this.#ctx.lineWidth = line_width;
         this.#ctx.strokeStyle = color;
+        
         this.#ctx.moveTo(p1.x, p1.y);
+        this.#ctx.lineTo(p2.x, p1.y);
         this.#ctx.lineTo(p2.x, p2.y);
-        this.#ctx.lineTo(p3.x, p3.y);
-        this.#ctx.lineTo(p4.x, p4.y);
-        this.#ctx.closePath();
+        this.#ctx.lineTo(p1.x, p2.y);
+        this.#ctx.lineTo(p1.x, p1.y);
 
         this.#ctx.stroke();
     }
@@ -751,6 +752,11 @@ export default class TimeSeriesGraph {
             this.#grid_density = Math.ceil(Math.floor((max - min) / 13) / 500) * 500;
         else 
             this.#grid_density = Math.ceil(Math.floor((max - min) / 13) / 1000) * 1000;
+    }
+
+    #update_slider() {
+        
+        //this.#slider.max = (800000 / this.#scale) - (this.#width / this.#scale);
     }
 
     /**

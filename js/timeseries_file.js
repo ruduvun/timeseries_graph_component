@@ -105,7 +105,7 @@ function load_success(sigs)
     for(let x of sigs)
     {
         var li = document.createElement("li");
-        li.innerText = x.name + " - " + x.data.byteLength + " bytes, first val:" + x.data[0];
+        li.innerText = x.name + " - " + x.data.byteLength + " bajtů, první hodnota:" + x.data[0];
         ol.appendChild(li);
         signals.push(x);
     }
@@ -132,6 +132,7 @@ function init_graph()
 function init_load() {
     console.log("Init load");
     signals = [];
+    signal_index = 0;
     load_timeseries_binary();
 }
 
@@ -142,6 +143,8 @@ export function init_timeseries_binary(container_name) {
         alert("Cannot initialize TimeSeries inside non-existing container");
 
     else {
+        cont.classList.add("timeseries_font");
+
         let input = document.createElement("input");
         input.multiple = true;
         input.type = "file";
